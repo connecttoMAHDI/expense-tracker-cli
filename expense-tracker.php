@@ -30,7 +30,8 @@ function help()
     echo "- delete --id [id]", N;
     echo "- list --category [?category]", N;
     echo "- summary", N;
-    echo "- summary --month [month] --category [?category]", N, N;
+    echo "- summary --month [month] --category [?category]", N;
+    echo "- export --category [?category] --month [?month]", N, N;
     return;
 }
 
@@ -68,6 +69,14 @@ switch ($command) {
         $category = $args['category'] ?? null;
         $month = $args['month'] ?? null;
         $expenseController->summary(
+            month: $month,
+            category: strtolower($category)
+        );
+        break;
+    case Commands::EXPORT:
+        $category = $args['category'] ?? null;
+        $month = $args['month'] ?? null;
+        $expenseController->exportToCsv(
             month: $month,
             category: strtolower($category)
         );

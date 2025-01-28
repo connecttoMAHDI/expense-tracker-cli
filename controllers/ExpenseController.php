@@ -72,27 +72,17 @@ class ExpenseController
         $expenses = $this->loadExpenses(true);
         $filteredExpenses = $expenses;
 
-        // Get the current year
-        $currentYear = (int)date('Y');
-
         // Apply month filter if provided
         if ($month) {
-            $filteredExpenses = array_filter($filteredExpenses, function ($expense) use ($month, $currentYear) {
-                $expenseDate = new DateTime($expense['createdAt']);
-                $expenseMonth = (int)$expenseDate->format('n');
-                $expenseYear = (int)$expenseDate->format('Y');
-                return $expenseMonth === $month && $expenseYear === $currentYear;
-            });
+            $filteredExpenses = $this->filterByMonth(expenses: $filteredExpenses, month: $month);
         }
 
         // Apply category filter if provided
         if ($category) {
-            $filteredExpenses = array_filter($filteredExpenses, function ($expense) use ($category) {
-                return strtolower($expense['category']) === $category;
-            });
+            $filteredExpenses = $this->filterByCategory(expenses: $filteredExpenses, category: $category);
         }
 
-        if(($category || $month) && empty($filteredExpenses)){
+        if (($category || $month) && empty($filteredExpenses)) {
             echo "No expenses found for the given filters.";
             exit;
         }
@@ -109,6 +99,78 @@ class ExpenseController
             echo "Total expenses: $$total" . PHP_EOL;
         }
         exit;
+    }
+
+    public function exportToCsv(?string $category, ?int $month): void
+    {
+        $expenses = $this->loadExpenses(true);
+        $filteredExpenses = $expenses;
+
+        // Apply month filter if provided
+        if ($month) {
+            $filteredExpenses = $this->filterByMonth(expenses: $filteredExpenses, month: $month);
+        }
+
+        // Apply category filter if provided
+        if ($category) {
+            $filteredExpenses = $this->filterByCategory(expenses: $filteredExpenses, category: $category);
+        }
+
+        if (empty($filteredExpenses)) {
+            echo "No expenses to export.";
+            exit;
+        }
+
+        $csvFilePath = __DIR__ . "/../expenses_export.csv";
+
+        $file = fopen($csvFilePath, "w");
+
+        if ($file === false) {
+            echo "Failed to create the CSV file.";
+            exit;
+        }
+
+        // Add headers
+        $headers = ['ID', 'Date', 'Description', 'Amount', 'Category'];
+        fputcsv($file, $headers);
+
+        // Write each expense as a row in the CSV
+        foreach ($filteredExpenses as $expense) {
+            fputcsv($file, [
+                $expense['id'],
+                $expense['createdAt'],
+                $expense['description'],
+                "$" . $expense['amount'],
+                $expense['category'] ?? 'N/A'
+            ]);
+        }
+
+        fclose($file);
+
+        echo "Expenses exported successfully to $csvFilePath.";
+        exit;
+    }
+
+    private function filterByCategory(array $expenses, string $category)
+    {
+        $filteredExpenses = array_filter($expenses, function ($expense) use ($category) {
+            return strtolower($expense['category']) === $category;
+        });
+
+        return $filteredExpenses;
+    }
+
+    private function filterByMonth(array $expenses, int $month)
+    {
+        $filteredExpenses = array_filter($expenses, function ($expense) use ($month) {
+            $expenseDate = new DateTime($expense['createdAt']);
+            $expenseMonth = (int)$expenseDate->format('n');
+            $expenseYear = (int)$expenseDate->format('Y');
+            $currentYear = (int)date('Y');
+            return $expenseMonth === $month && $expenseYear === $currentYear;
+        });
+
+        return $filteredExpenses;
     }
 
     private function formatOutput(array $expenses)
