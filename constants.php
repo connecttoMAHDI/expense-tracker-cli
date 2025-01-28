@@ -1,4 +1,4 @@
 <?php
 
-const N = "\r\n";
-const DB_FILE_PATH = __DIR__ . "/expenses.json";
+define('N', "\r\n");
+define('EXPENSES_PATH', __DIR__ . "/expenses.json");

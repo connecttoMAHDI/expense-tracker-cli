@@ -26,16 +26,17 @@ function help()
 {
     echo N;
     echo "Here is the list of commands:", N;
-    echo "- add --description [description] --amount [amount]", N;
+    echo "- add --description [description] --amount [amount] --category [?category]", N;
     echo "- delete --id [id]", N;
-    echo "- list", N;
+    echo "- list --category [?category]", N;
     echo "- summary", N;
-    echo "- summary --month [month]", N, N;
+    echo "- summary --month [month] --category [?category]", N, N;
     return;
 }
 
 switch ($command) {
-    case Commands::$ADD:
+    case Commands::ADD:
+        $category = strtolower($args['category']) ?? null;
         $description = $args['description'] ?? null;
         $amount = $args['amount'] ?? null;
         if ($description && $amount) {
@@ -44,13 +45,13 @@ switch ($command) {
                 echo "[amount] cann't be negative.";
                 exit;
             }
-            $expenseController->store($description, $amount);
+            $expenseController->store($category, $description, $amount);
         } else {
             echo "[description] and [amount] are required.";
             exit;
         }
         break;
-    case Commands::$DELETE:
+    case Commands::DELETE:
         $id = $args['id'] ?? null;
         if ($id) {
             $expenseController->delete($id);
@@ -59,15 +60,20 @@ switch ($command) {
             exit;
         }
         break;
-    case Commands::$LIST:
-        $expenseController->list();
+    case Commands::LIST:
+        $category = $args['category'] ?? null;
+        $expenseController->list(category: strtolower($category));
         break;
-    case Commands::$SUMMARY:
-        $summary = $args['month'] ?? null;
-        $expenseController->summary($summary);
+    case Commands::SUMMARY:
+        $category = $args['category'] ?? null;
+        $month = $args['month'] ?? null;
+        $expenseController->summary(
+            month: $month,
+            category: strtolower($category)
+        );
         break;
     case '--help':
         help();
     default:
-        echo "Usage: php expense-tracker.cli [command] --arg value --arg value";
+        echo "Usage: php expense-tracker.cli {command} --arg value --arg value";
 }

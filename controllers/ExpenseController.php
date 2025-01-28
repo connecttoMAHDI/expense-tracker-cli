@@ -10,13 +10,13 @@ use Models\Expense;
 
 class ExpenseController
 {
-    public function store(string $description, int $amount)
+    public function store(?string $category, string $description, int $amount)
     {
         // Create the expense
-        $expense = Expense::create(description: $description, amount: $amount);
+        $expense = Expense::create(category: $category, description: $description, amount: $amount);
 
         // Load all expenses
-        if (file_exists(DB_FILE_PATH)) {
+        if (file_exists(EXPENSES_PATH)) {
             $expenses = $this->loadExpenses(true);
         } else {
             $expenses = [];
@@ -49,32 +49,47 @@ class ExpenseController
         exit;
     }
 
-    public function list()
+    public function list(?string $category)
     {
         $expenses = $this->loadExpenses(true) ?? [];
 
-        $this->formatOutput($expenses);
+        // Apply category filter if provided
+        if ($category) {
+            $filteredExpenses = array_filter($expenses, function ($expense) use ($category) {
+                return strtolower($expense['category']) === $category;
+            });
+        } else {
+            $filteredExpenses = $expenses;
+        }
+
+        $this->formatOutput($filteredExpenses);
         exit;
     }
 
-    public function summary(?int $month)
+    public function summary(?int $month, ?string $category)
     {
         $total = 0;
         $expenses = $this->loadExpenses(true);
+        $filteredExpenses = $expenses;
 
         // Get the current year
         $currentYear = (int)date('Y');
 
-        // Apply filter if provided
+        // Apply month filter if provided
         if ($month) {
-            $filteredExpenses = array_filter($expenses, function ($expense) use ($month, $currentYear) {
+            $filteredExpenses = array_filter($filteredExpenses, function ($expense) use ($month, $currentYear) {
                 $expenseDate = new DateTime($expense['createdAt']);
                 $expenseMonth = (int)$expenseDate->format('n');
                 $expenseYear = (int)$expenseDate->format('Y');
                 return $expenseMonth === $month && $expenseYear === $currentYear;
             });
-        } else {
-            $filteredExpenses = $expenses;
+        }
+
+        // Apply category filter if provided
+        if ($category) {
+            $filteredExpenses = array_filter($filteredExpenses, function ($expense) use ($category) {
+                return strtolower($expense['category']) === $category;
+            });
         }
 
         // Calculate total expenses
@@ -94,12 +109,13 @@ class ExpenseController
     private function formatOutput(array $expenses)
     {
         // Define column headers
-        $headers = ['ID', 'Date', 'Description', 'Amount'];
+        $headers = ['ID', 'Date', 'Description', 'Amount', 'Category'];
         $columnWidths = [
             'ID' => 5,
             'Date' => 12,
             'Description' => 20,
-            'Amount' => 10
+            'Amount' => 10,
+            'Category' => 15
         ];
 
         // Print headers with proper spacing
@@ -117,14 +133,15 @@ class ExpenseController
             echo str_pad($expense['createdAt'], $columnWidths['Date'], ' ', STR_PAD_RIGHT);
             echo str_pad($expense['description'], $columnWidths['Description'], ' ', STR_PAD_RIGHT);
             echo str_pad('$' . $expense['amount'], $columnWidths['Amount'], ' ', STR_PAD_RIGHT);
+            echo str_pad($expense['category'] ?? 'N/A', $columnWidths['Category'], ' ', STR_PAD_RIGHT);
             echo N;
         }
     }
 
     private function loadExpenses(bool $assoc = false): array
     {
-        if (file_exists(DB_FILE_PATH)) {
-            $expensesRawFile = file_get_contents(DB_FILE_PATH);
+        if (file_exists(EXPENSES_PATH)) {
+            $expensesRawFile = file_get_contents(EXPENSES_PATH);
         } else {
             echo "No Expenses exist!", N;
             exit;
@@ -149,7 +166,7 @@ class ExpenseController
             exit;
         }
 
-        $res = file_put_contents(DB_FILE_PATH, $expenses);
+        $res = file_put_contents(EXPENSES_PATH, $expenses);
 
         if ($res === false) {
             echo "Failed to write expenses to expenses.json.";
