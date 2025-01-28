@@ -92,6 +92,11 @@ class ExpenseController
             });
         }
 
+        if(($category || $month) && empty($filteredExpenses)){
+            echo "No expenses found for the given filters.";
+            exit;
+        }
+
         // Calculate total expenses
         foreach ($filteredExpenses as $e) {
             $total += $e['amount'];

@@ -36,7 +36,7 @@ function help()
 
 switch ($command) {
     case Commands::ADD:
-        $category = strtolower($args['category']) ?? null;
+        $category = $args['category'] ?? null;
         $description = $args['description'] ?? null;
         $amount = $args['amount'] ?? null;
         if ($description && $amount) {
